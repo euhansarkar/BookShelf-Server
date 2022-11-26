@@ -171,21 +171,27 @@ async function run() {
       return res.send(result);
     });
 
-    app.get(`/products`, async(req, res) => {
+    app.get(`/products`, async (req, res) => {
       const email = req.query.email;
-      const query = {seller_email: email};
+      const query = { seller_email: email };
       const result = await productsCollection.find(query).toArray();
       return res.send(result);
-    })
+    });
 
-    app.delete(`/products/:id`, async(req, res) => {
+    app.delete(`/products/:id`, async (req, res) => {
       const id = req.params.id;
-      const query = {_id: ObjectId(id)};
-      const product = await productsCollection.findOne(query);
+      const query = { _id: ObjectId(id) };
+      const product = await productsCollection.deleteOne(query);
       return res.send(product);
-    })
+    });
 
-
+   app.get(`/payorder/:id`, async(req, res) => {
+    const id = req.params.id;
+    const query = {_id: ObjectId(id)};
+    const result = await ordersCollection.findOne(query);
+    return res.send(result);
+   })
+  
   } finally {
   }
 }
