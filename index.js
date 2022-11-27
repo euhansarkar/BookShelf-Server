@@ -1,8 +1,9 @@
 const express = require(`express`);
 const cors = require(`cors`);
-require("dotenv").config();
 const app = express();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 var jwt = require("jsonwebtoken");
+require("dotenv").config();
 
 const port = process.env.PORT || 5000;
 // middle wires
@@ -49,10 +50,10 @@ async function run() {
       const email = req.query.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-      console.log(user);
+      console.log(`this is `,user);
       if (user) {
         const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
-          expiresIn: `6h`,
+          expiresIn: `7d`,
         });
         return res.send({ accessToken: token });
       }
@@ -93,7 +94,7 @@ async function run() {
       return res.send(result);
     });
 
-    app.get(`/orders`, async (req, res) => {
+    app.get(`/orders`,  async (req, res) => {
       const email = req.query.email;
       // const decodedEmail = req.decoded.email;
       // if (decodedEmail !== email) {
@@ -123,13 +124,13 @@ async function run() {
       return res.send(result);
     });
 
-    app.put(`/users/admin/:id`, async (req, res) => {
-      // const decodedEmail = req.decoded.email;
-      // const query = { email: decodedEmail };
-      // const user = await usersCollection.findOne(query);
-      // if (user?.role !== `admin`) {
-      //   return res.status(403).send({ message: `unauthorized access` });
-      // }
+    app.put(`/users/admin/:id`, verifyJWT, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== `admin`) {
+        return res.status(403).send({ message: `unauthorized access` });
+      }
       const id = req.params.id;
       const filter = { _id: ObjectId(id) };
       const options = { upsert: true };
@@ -146,7 +147,7 @@ async function run() {
       return res.send(result);
     });
 
-    app.get(`/users/admin/:email`, async (req, res) => {
+    app.get(`/users/admin/:email`, verifyJWT, async (req, res) => {
       const email = req.params.email;
       const query = { email };
       const user = await usersCollection.findOne(query);
@@ -173,6 +174,7 @@ async function run() {
 
     app.get(`/products`, async (req, res) => {
       const email = req.query.email;
+      console.log(email);
       const query = { seller_email: email };
       const result = await productsCollection.find(query).toArray();
       return res.send(result);
@@ -185,13 +187,33 @@ async function run() {
       return res.send(product);
     });
 
-   app.get(`/payorder/:id`, async(req, res) => {
-    const id = req.params.id;
-    const query = {_id: ObjectId(id)};
-    const result = await ordersCollection.findOne(query);
-    return res.send(result);
-   })
-  
+    app.get(`/payorder/:id`, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      // console.log(ordersCollection);
+      // console.log(usersCollection);
+      const order = await ordersCollection.findOne(query);
+      console.log(order);
+      return res.send(order);
+    });
+
+    app.post(`/create-payment-intent`, async (req, res) => {
+      const order = req.body;
+      console.log(`inside payment order `, order)
+      const price = order.price;
+      const amount = price * 100;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        currency: "usd",
+        amount: amount,
+        payment_method_types: ["card"],
+      });
+      return res.send({
+        clientSecret: paymentIntent.client_secret,
+      })
+    });
+
+
   } finally {
   }
 }
