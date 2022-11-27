@@ -25,6 +25,7 @@ function verifyJWT(req, res, next) {
   if (!authHeader) {
     return res.status(401).send(`unauthorized access`);
   }
+  // console.log(`jwt admin`,authHeader);
   const token = authHeader.split(` `)[1];
   jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
     if (err) {
@@ -147,8 +148,9 @@ async function run() {
       return res.send(result);
     });
 
-    app.get(`/users/admin/:email`, verifyJWT, async (req, res) => {
+    app.get(`/users/admin/:email`,  async (req, res) => {
       const email = req.params.email;
+      console.log(`jwt api`,email);
       const query = { email };
       const user = await usersCollection.findOne(query);
       return res.send({ isAdmin: user?.role === `admin` });
