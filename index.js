@@ -50,7 +50,7 @@ async function run() {
       const email = req.query.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-      console.log(`this is `,user);
+      console.log(`this is `, user);
       if (user) {
         const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
           expiresIn: `7d`,
@@ -94,7 +94,7 @@ async function run() {
       return res.send(result);
     });
 
-    app.get(`/orders`,  async (req, res) => {
+    app.get(`/orders`, async (req, res) => {
       const email = req.query.email;
       // const decodedEmail = req.decoded.email;
       // if (decodedEmail !== email) {
@@ -187,6 +187,13 @@ async function run() {
       return res.send(product);
     });
 
+    app.delete(`/orders/:id`, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const order = await ordersCollection.deleteOne(query);
+      return res.send(order);
+    });
+
     app.get(`/payorder/:id`, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
@@ -199,7 +206,7 @@ async function run() {
 
     app.post(`/create-payment-intent`, async (req, res) => {
       const order = req.body;
-      console.log(`inside payment order `, order)
+      console.log(`inside payment order `, order);
       const price = order.price;
       const amount = price * 100;
 
@@ -210,10 +217,8 @@ async function run() {
       });
       return res.send({
         clientSecret: paymentIntent.client_secret,
-      })
+      });
     });
-
-
   } finally {
   }
 }
