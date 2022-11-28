@@ -1,9 +1,12 @@
 const express = require(`express`);
 const cors = require(`cors`);
 const app = express();
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 var jwt = require("jsonwebtoken");
 require("dotenv").config();
+const Stripe = require("stripe");
+const stripe = Stripe(
+  `sk_test_51M7P4lKglMI0jcEshNRoudSA3FQ0Z5WOJAygkvFLYKUL0wRXp1UGgEXKNeigpUvmwefeqFvI2aYcN8knteaaF4Ib00OErFLJOM`
+);
 
 const port = process.env.PORT || 5000;
 // middle wires
@@ -41,6 +44,7 @@ async function run() {
     const productsCollection = client.db(`BookSelf_DB`).collection(`products`);
     const ordersCollection = client.db(`BookSelf_DB`).collection(`orders`);
     const usersCollection = client.db(`BookSelf_DB`).collection(`users`);
+    const paymentsCollection = client.db(`BookSelf_DB`).collection(`payments`);
     const categoriesCollection = client
       .db(`BookSelf_DB`)
       .collection(`categories`);
@@ -148,9 +152,9 @@ async function run() {
       return res.send(result);
     });
 
-    app.get(`/users/admin/:email`,  async (req, res) => {
+    app.get(`/users/admin/:email`, async (req, res) => {
       const email = req.params.email;
-      console.log(`jwt api`,email);
+      // console.log(`jwt api`,email);
       const query = { email };
       const user = await usersCollection.findOne(query);
       return res.send({ isAdmin: user?.role === `admin` });
@@ -211,15 +215,34 @@ async function run() {
       console.log(`inside payment order `, order);
       const price = order.price;
       const amount = price * 100;
+      console.log(`amount`, amount);
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        currency: "usd",
-        amount: amount,
-        payment_method_types: ["card"],
-      });
-      return res.send({
-        clientSecret: paymentIntent.client_secret,
-      });
+      if (amount) {
+        const paymentIntent = await stripe.paymentIntents.create({
+          currency: "usd",
+          amount: amount,
+          payment_method_types: ["card"],
+        });
+        return res.send({
+          clientSecret: paymentIntent.client_secret,
+        });
+      }
+    });
+
+    app.post(`/payments`, async (req, res) => {
+      const payment = req.body;
+      console.log(payment);
+      const result = await paymentsCollection.insertOne(payment);
+      const id = payment.orderId;
+      const filter = { _id: ObjectId(id) };
+      const updatedDoc = {
+         $set: {
+          isPaid: true,
+          transectionId: payment.transectionId,
+         }
+      }
+      const updateResult = await ordersCollection.updateOne(filter, updatedDoc);
+      return res.send(result);
     });
   } finally {
   }
