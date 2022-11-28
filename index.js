@@ -45,6 +45,7 @@ async function run() {
     const ordersCollection = client.db(`BookSelf_DB`).collection(`orders`);
     const usersCollection = client.db(`BookSelf_DB`).collection(`users`);
     const paymentsCollection = client.db(`BookSelf_DB`).collection(`payments`);
+    const wishlistsCollection = client.db(`BookSelf_DB`).collection(`wishlists`);
     const categoriesCollection = client
       .db(`BookSelf_DB`)
       .collection(`categories`);
@@ -259,6 +260,38 @@ async function run() {
       const updateResult = await ordersCollection.updateOne(filter, updatedDoc);
       return res.send(result);
     });
+
+    app.post(`/wishlists`, async(req, res) => {
+      const product = req.body;
+      const result = await wishlistsCollection.insertOne(product);
+      return res.send(result);
+    })
+
+    app.get(`/wishlists`, async(req, res) => {
+      const email = req.query.email;
+      const query = {wishLister: email};
+      const result = await wishlistsCollection.find(query).toArray();
+      return res.send(result);
+    })
+
+    app.patch(`/products/:id`, async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const updatedDoc = {
+        $set:{
+          isReported: true,
+        }
+      }
+      const result = await productsCollection.updateOne(query, updatedDoc);
+      return res.send(result);
+    })
+
+    app.get(`/reportedproducts`, async(req, res) => {
+      const query = {isReported: true};
+      const result = await productsCollection.find(query).toArray();
+      return res.send(result);
+    })
+
   } finally {
   }
 }
