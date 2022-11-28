@@ -160,6 +160,21 @@ async function run() {
       return res.send({ isAdmin: user?.role === `admin` });
     });
 
+    app.get(`/users/seller/:email`, async (req, res) => {
+      const email = req.params.email;
+      // console.log(`jwt api`,email);
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+      return res.send({ isSeller: user?.role === `seller` });
+    });
+
+    app.get(`/users/buyer/:email`, async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const user = await usersCollection.findOne(query);
+      return res.send({ isBuyer: user?.role === `buyer` });
+    });
+
     app.get(`/sellers`, async (req, res) => {
       const query = { role: `seller` };
       const sellers = await usersCollection.find(query).toArray();
@@ -236,11 +251,11 @@ async function run() {
       const id = payment.orderId;
       const filter = { _id: ObjectId(id) };
       const updatedDoc = {
-         $set: {
+        $set: {
           isPaid: true,
           transectionId: payment.transectionId,
-         }
-      }
+        },
+      };
       const updateResult = await ordersCollection.updateOne(filter, updatedDoc);
       return res.send(result);
     });
