@@ -248,8 +248,6 @@ async function run() {
     app.get(`/payorder/:id`, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
-      // console.log(ordersCollection);
-      // console.log(usersCollection);
       const order = await ordersCollection.findOne(query);
       console.log(order);
       return res.send(order);
@@ -328,6 +326,8 @@ async function run() {
       const result = await usersCollection.findOne(query);
       return res.send(result);
     });
+
+    
   } finally {
   }
 }
