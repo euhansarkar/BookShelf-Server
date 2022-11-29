@@ -28,13 +28,15 @@ function verifyJWT(req, res, next) {
   if (!authHeader) {
     return res.status(401).send(`unauthorized access`);
   }
-  // console.log(`jwt admin`,authHeader);
   const token = authHeader.split(` `)[1];
   jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+    // console.log(`jwt admin`,token);
+
     if (err) {
       return res.status(403).send(`forbidden access`);
     }
-    return (req.decoded = decoded);
+    // console.log(decoded);
+    req.decoded = decoded;
     next();
   });
 }
@@ -45,7 +47,9 @@ async function run() {
     const ordersCollection = client.db(`BookSelf_DB`).collection(`orders`);
     const usersCollection = client.db(`BookSelf_DB`).collection(`users`);
     const paymentsCollection = client.db(`BookSelf_DB`).collection(`payments`);
-    const wishlistsCollection = client.db(`BookSelf_DB`).collection(`wishlists`);
+    const wishlistsCollection = client
+      .db(`BookSelf_DB`)
+      .collection(`wishlists`);
     const categoriesCollection = client
       .db(`BookSelf_DB`)
       .collection(`categories`);
@@ -56,7 +60,6 @@ async function run() {
       const email = req.query.email;
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-      console.log(`this is `, user);
       if (user) {
         const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
           expiresIn: `7d`,
@@ -132,6 +135,7 @@ async function run() {
 
     app.put(`/users/admin/:id`, verifyJWT, async (req, res) => {
       const decodedEmail = req.decoded.email;
+      console.log(decodedEmail);
       const query = { email: decodedEmail };
       const user = await usersCollection.findOne(query);
       if (user?.role !== `admin`) {
@@ -143,6 +147,31 @@ async function run() {
       const updatedDoc = {
         $set: {
           role: "admin",
+        },
+      };
+      const result = await usersCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      return res.send(result);
+    });
+
+    app.put(`/users/seller/:id`, verifyJWT, async (req, res) => {
+      console.log(`inside sellers`);
+      const decodedEmail = req.decoded.email;
+      const query = { email: decodedEmail };
+      const user = await usersCollection.findOne(query);
+      if (user?.role !== `admin`) {
+        return res.status(403).send({ message: `unauthorized access` });
+      }
+      const id = req.params.id;
+      console.log(`this i suser id : `, id);
+      const filter = { _id: ObjectId(id) };
+      const options = { upsert: true };
+      const updatedDoc = {
+        $set: {
+          isApproved: true,
         },
       };
       const result = await usersCollection.updateOne(
@@ -261,37 +290,44 @@ async function run() {
       return res.send(result);
     });
 
-    app.post(`/wishlists`, async(req, res) => {
+    app.post(`/wishlists`, async (req, res) => {
       const product = req.body;
       const result = await wishlistsCollection.insertOne(product);
       return res.send(result);
-    })
+    });
 
-    app.get(`/wishlists`, async(req, res) => {
+    app.get(`/wishlists`, async (req, res) => {
       const email = req.query.email;
-      const query = {wishLister: email};
+      const query = { wishLister: email };
       const result = await wishlistsCollection.find(query).toArray();
       return res.send(result);
-    })
+    });
 
-    app.patch(`/products/:id`, async(req, res) => {
+    app.put(`/products/:id`, async (req, res) => {
       const id = req.params.id;
-      const query = {_id: ObjectId(id)};
+      const query = { _id: ObjectId(id) };
+      const options = { upsert: true };
       const updatedDoc = {
-        $set:{
+        $set: {
           isReported: true,
-        }
-      }
+        },
+      };
       const result = await productsCollection.updateOne(query, updatedDoc);
       return res.send(result);
-    })
+    });
 
-    app.get(`/reportedproducts`, async(req, res) => {
-      const query = {isReported: true};
+    app.get(`/reportedproducts`, async (req, res) => {
+      const query = { isReported: true };
       const result = await productsCollection.find(query).toArray();
       return res.send(result);
-    })
+    });
 
+    app.get(`/userbyEmail/:email`, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const result = await usersCollection.findOne(query);
+      return res.send(result);
+    });
   } finally {
   }
 }
