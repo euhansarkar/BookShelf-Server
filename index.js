@@ -1,4 +1,5 @@
 const express = require(`express`);
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require(`cors`);
 const app = express();
 var jwt = require("jsonwebtoken");
@@ -15,13 +16,13 @@ app.use(express.json());
 
 // mongodb
 
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.fczblwv.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+console.log(uri);
 
 function verifyJWT(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -223,7 +224,7 @@ async function run() {
       return res.send(result);
     });
 
-    app.get(`/products`, async (req, res) => {
+    app.get(`/productsme`, async (req, res) => {
       const email = req.query.email;
       console.log(email);
       const query = { seller_email: email };
@@ -326,6 +327,38 @@ async function run() {
       const result = await usersCollection.findOne(query);
       return res.send(result);
     });
+
+    app.put(`/advertiseTrue/:id`, async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const updatedDoc = {
+        $set: {
+          isAdvertise: true,
+        }
+      }
+      const result = await productsCollection.updateOne(query, updatedDoc);
+      return res.send(result);
+    })
+
+    app.put(`/advertiseFalse/:id`, async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)};
+      const updatedDoc = {
+        $set:{
+          isAdvertise: false,
+        }
+      }
+      const result = await productsCollection.updateOne(query, updatedDoc);
+      return res.send(result);
+    })
+
+
+    app.get(`/advertiseproducts`, async(req, res) => {
+      const query = {isAdvertise: true};
+      const result = await productsCollection.find(query).toArray();
+      return res.send(result);
+    })
+
 
     
   } finally {
